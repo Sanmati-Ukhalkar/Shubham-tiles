@@ -1,4 +1,4 @@
-# SHUBHA — Block Spec (placeholder until real numbers arrive)
+# SHUBHAM — Block Spec (placeholder until real numbers arrive)
 
 Based on typical Indian market listings (Nov 2026). Every value here is a setting in the website, so swapping in your real numbers later takes seconds.
 

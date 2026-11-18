@@ -1,16 +1,16 @@
 // ─────────────────────────────────────────────────────────────
-//  SHUBHA site settings — change real business values here.
+//  SHUBHAM site settings — change real business values here.
 //  Every number in the designer, estimate and WhatsApp message
 //  comes from this file.
 // ─────────────────────────────────────────────────────────────
 
 export const BRAND = {
-  name: 'SHUBHA',
+  name: 'SHUBHAM',
   tagline: 'Concrete Pavers',
   // Country code + number, digits only. PLACEHOLDER — replace with the real number.
   whatsapp: '919999999999',
   phone: '+91 99999 99999',
-  email: 'hello@shubha.in',
+  email: 'hello@shubham.in',
   address: 'Maharashtra, India',
 };
 
@@ -37,10 +37,10 @@ export const THICKNESSES: Thickness[] = [
 export type BlockColour = { id: string; hex: string; dark: string };
 
 export const COLOURS: BlockColour[] = [
-  { id: 'grey', hex: '#a9a7a2', dark: '#8b8984' },
-  { id: 'charcoal', hex: '#4a4a4c', dark: '#353537' },
-  { id: 'terracotta', hex: '#c0583a', dark: '#9e452b' },
-  { id: 'sandstone', hex: '#d9b26a', dark: '#bb9450' },
+  { id: 'grey', hex: '#b9b6b0', dark: '#94918b' },
+  { id: 'charcoal', hex: '#45464a', dark: '#2f3033' },
+  { id: 'terracotta', hex: '#c9512c', dark: '#a03f22' },
+  { id: 'sandstone', hex: '#e2b257', dark: '#c2923d' },
 ];
 
 export const colourById = (id: string) => COLOURS.find((c) => c.id === id) ?? COLOURS[0];

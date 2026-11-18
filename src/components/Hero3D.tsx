@@ -1,12 +1,47 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { colourById } from '../config';
+import { BLOCK, colourById } from '../config';
 import { concreteGrain, makeBlockGeometry } from '../geometry/block3d';
-import { colourOf, Design, tileCentre } from '../geometry/trihex';
+import { drawTiles } from '../geometry/render2d';
+import { colourOf, Design, Tile, tileCentre } from '../geometry/trihex';
 import { useI18n } from '../i18n';
 
-const DESIGN_A: Design = { pattern: 'stripes', palette: ['grey', 'grey', 'charcoal'], overrides: {} };
-const DESIGN_B: Design = { pattern: 'triad', palette: ['terracotta', 'sandstone', 'grey'], overrides: {} };
+const DESIGN_A: Design = { pattern: 'stripes', palette: ['terracotta', 'grey'], overrides: {} };
+const DESIGN_B: Design = { pattern: 'triad', palette: ['charcoal', 'sandstone', 'terracotta'], overrides: {} };
+
+const SQ3 = Math.sqrt(3);
+/**
+ * Seamless repeating texture of a design, aligned to the block lattice, used for the
+ * paving that runs beyond the 3D blocks all the way to the horizon.
+ * One tile = 3 blocks wide × 6 rows tall, which repeats every pattern we use here.
+ */
+function patternTexture(design: Design) {
+  const R = BLOCK.radius;
+  const W = 3 * SQ3 * R;
+  const H = 9 * R;
+  const scale = 640; // px per metre
+  const c = document.createElement('canvas');
+  c.width = Math.round(W * scale);
+  c.height = Math.round(H * scale);
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#4d463d';
+  g.fillRect(0, 0, c.width, c.height);
+  const sx = c.width / W;
+  const sy = c.height / H;
+  const tiles: Tile[] = [];
+  for (let r = -2; r <= 8; r++)
+    for (let q = -6; q <= 6; q++) {
+      const p = tileCentre(q, r);
+      tiles.push({ q, r, cx: p.x, cy: p.y, key: '' });
+    }
+  g.scale(sx / scale, sy / scale); // tiny correction for pixel rounding
+  drawTiles(g, tiles, design, { scale, ox: 0, oy: 0 }, undefined, '#4d463d');
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 16;
+  return { t, W, H };
+}
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -15,10 +50,10 @@ const smooth = (a: number, b: number, x: number) => {
 
 // camera keyframes: [progress, position, lookAt]
 const KEYS: [number, THREE.Vector3, THREE.Vector3][] = [
-  [0.0, new THREE.Vector3(0.6, 6.2, 4.2), new THREE.Vector3(0, 0, -0.4)],
-  [0.3, new THREE.Vector3(0.2, 1.3, 3.0), new THREE.Vector3(0, 0.45, 0)],
-  [0.58, new THREE.Vector3(-0.4, 1.0, 2.4), new THREE.Vector3(0, 0.55, 0)],
-  [1.0, new THREE.Vector3(2.6, 3.6, 3.4), new THREE.Vector3(0, 0, 0)],
+  [0.0, new THREE.Vector3(0.2, 2.9, 2.5), new THREE.Vector3(0, 0, -0.6)],
+  [0.3, new THREE.Vector3(0.25, 1.05, 1.95), new THREE.Vector3(0, 0.5, 0)],
+  [0.58, new THREE.Vector3(-0.3, 0.9, 1.7), new THREE.Vector3(0, 0.55, 0)],
+  [1.0, new THREE.Vector3(1.5, 2.4, 2.3), new THREE.Vector3(0, 0, -0.2)],
 ];
 
 function cameraAt(p: number, pos: THREE.Vector3, look: THREE.Vector3) {
@@ -53,16 +88,18 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.6 : 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    // Neutral tone mapping keeps the block colours rich instead of washing them out
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.08;
 
     const scene = new THREE.Scene();
-    const skyTop = new THREE.Color('#3b4a6b');
-    const horizon = new THREE.Color('#efc39a');
-    scene.fog = new THREE.Fog(horizon, 4.5, 10.5);
+    const skyTop = new THREE.Color('#4f95dc');
+    const horizon = new THREE.Color('#ffd9ae');
+    // haze only far away, so the paving near the camera stays crisp and colourful
+    scene.fog = new THREE.Fog(horizon, 7, 26);
 
-    // gradient sky dome
-    const skyGeo = new THREE.SphereGeometry(40, 32, 16);
+    // golden-hour sky dome
+    const skyGeo = new THREE.SphereGeometry(60, 32, 16);
     const skyMat = new THREE.ShaderMaterial({
       side: THREE.BackSide,
       depthWrite: false,
@@ -70,33 +107,53 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
       uniforms: { top: { value: skyTop }, bottom: { value: horizon } },
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
       fragmentShader:
-        'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y*1.8+0.15,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, h),1.0); }',
+        'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y*2.4+0.05,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, pow(h,0.7)),1.0); }',
     });
     scene.add(new THREE.Mesh(skyGeo, skyMat));
 
-    const camera = new THREE.PerspectiveCamera(mobile ? 58 : 45, 1, 0.05, 80);
+    const camera = new THREE.PerspectiveCamera(mobile ? 60 : 42, 1, 0.05, 120);
 
-    scene.add(new THREE.HemisphereLight('#ffe8cf', '#6b5845', 1.1));
-    const sun = new THREE.DirectionalLight('#ffe0bd', 2.6);
-    sun.position.set(-4, 3.2, -3);
+    scene.add(new THREE.HemisphereLight('#e3eeff', '#8a7660', 1.15));
+    const sun = new THREE.DirectionalLight('#fff0da', 3.0);
+    sun.position.set(-4.5, 3.6, -2.5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
     const sc = sun.shadow.camera as THREE.OrthographicCamera;
-    sc.left = sc.bottom = -5;
-    sc.right = sc.top = 5;
+    sc.left = sc.bottom = -4.5;
+    sc.right = sc.top = 4.5;
     sc.near = 0.5;
     sc.far = 15;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.01;
     scene.add(sun);
 
-    // sand bed under the blocks (shows in the joints)
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 48), new THREE.MeshStandardMaterial({ color: '#75695a', roughness: 1 }));
+    // sand bed under the 3D blocks (shows in the joints and when blocks lift)
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(8, 48), new THREE.MeshStandardMaterial({ color: '#5a5045', roughness: 1 }));
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // field of blocks
-    const RAD = mobile ? 5 : 6;
+    // field of real 3D blocks around the centre…
+    const RAD = mobile ? 3.6 : 4.6;
+
+    // …and the same paving continuing as a seamless texture all the way to the horizon
+    const texA = patternTexture(DESIGN_A);
+    const texB = patternTexture(DESIGN_B);
+    const ringGeo = new THREE.RingGeometry(RAD - 0.45, 90, 160, 1);
+    ringGeo.rotateX(-Math.PI / 2);
+    const rp = ringGeo.attributes.position;
+    const ruv = new Float32Array(rp.count * 2);
+    for (let i = 0; i < rp.count; i++) {
+      ruv[i * 2] = rp.getX(i) / texA.W;
+      ruv[i * 2 + 1] = -rp.getZ(i) / texA.H;
+    }
+    ringGeo.setAttribute('uv', new THREE.BufferAttribute(ruv, 2));
+    const ringMat = new THREE.MeshStandardMaterial({ map: texA.t, roughness: 0.9 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = 0.077;
+    ring.receiveShadow = true;
+    scene.add(ring);
+    let ringIsB = false;
     const tiles: { q: number; r: number; x: number; z: number; d: number }[] = [];
     for (let r = -40; r <= 40; r++)
       for (let q = -40; q <= 40; q++) {
@@ -122,7 +179,7 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
     // hero block
     const heroGeo = makeBlockGeometry(0.08, 'high');
     heroGeo.translate(0, -0.04, 0);
-    const hero = new THREE.Mesh(heroGeo, new THREE.MeshStandardMaterial({ color: '#b3b0aa', roughness: 0.85, bumpMap: concreteGrain(), bumpScale: 0.8 }));
+    const hero = new THREE.Mesh(heroGeo, new THREE.MeshStandardMaterial({ color: '#d0cdc6', roughness: 0.8, bumpMap: concreteGrain(), bumpScale: 0.8 }));
     hero.castShadow = true;
     hero.scale.setScalar(2.2);
     scene.add(hero);
@@ -176,17 +233,26 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
       const t3 = smooth(0.62, 0.98, p);
       for (let i = 0; i < tiles.length; i++) {
         const tl = tiles[i];
-        const delay = (tl.d / RAD) * 0.55;
-        const s = Math.min(1, Math.max(0, (t3 - delay) / 0.45));
+        // a ripple travels outward: each block hops, flips, and lands in its new colour,
+        // so the surface always looks finished
+        const delay = (tl.d / RAD) * 0.8;
+        const s = Math.min(1, Math.max(0, (t3 - delay) / 0.2));
         const arc = Math.sin(s * Math.PI);
-        const y = arc * (0.9 + (i % 7) * 0.08);
-        const spin = arc * ((i % 5) - 2) * 0.35;
-        qn.setFromEuler(new THREE.Euler(spin * 0.6, spin, spin * 0.4));
+        const y = arc * (0.16 + (i % 5) * 0.02);
+        const spin = arc * (i % 2 ? 1 : -1) * 0.5;
+        qn.setFromEuler(new THREE.Euler(spin, 0, spin * 0.5));
         v.set(tl.x, y, tl.z);
         m.compose(v, qn, one);
         field.setMatrixAt(i, m);
         tmpC.copy(s > 0.5 ? colB[i] : colA[i]).multiplyScalar(jitter[i]);
         field.setColorAt(i, tmpC);
+      }
+      // the far paving switches pattern once the wave of new blocks reaches it
+      const wantB = t3 > 0.9;
+      if (wantB !== ringIsB) {
+        ringIsB = wantB;
+        ringMat.map = wantB ? texB.t : texA.t;
+        ringMat.needsUpdate = true;
       }
       field.instanceMatrix.needsUpdate = true;
       if (field.instanceColor) field.instanceColor.needsUpdate = true;
@@ -212,6 +278,9 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
       renderer.dispose();
       geo.dispose();
       heroGeo.dispose();
+      ringGeo.dispose();
+      texA.t.dispose();
+      texB.t.dispose();
     };
   }, []);
 

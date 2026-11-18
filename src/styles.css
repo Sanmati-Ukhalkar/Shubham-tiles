@@ -110,11 +110,18 @@ img { max-width: 100%; display: block; }
 .hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 0.8s; }
 .hero-shade {
   position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(20, 16, 12, 0.45) 0%, rgba(20, 16, 12, 0) 30%, rgba(20, 16, 12, 0) 55%, rgba(20, 16, 12, 0.6) 100%);
+  background: linear-gradient(180deg, rgba(20, 16, 12, 0.32) 0%, rgba(20, 16, 12, 0) 22%, rgba(20, 16, 12, 0) 60%, rgba(20, 16, 12, 0.45) 100%);
 }
 .hero-panel {
   position: absolute; left: var(--gutter); right: var(--gutter); color: #fff; transition: opacity 0.1s linear; will-change: opacity, transform;
+  isolation: isolate;
 }
+/* soft dark halo behind the words so they stay readable over any pattern */
+.hero-panel::before {
+  content: ''; position: absolute; inset: -48px -64px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 72% 62% at 35% 50%, rgba(14, 11, 9, 0.72), rgba(14, 11, 9, 0) 74%);
+}
+.hero-panel .accent { color: #ff8a3d; text-shadow: 0 2px 22px rgba(0, 0, 0, 0.6); }
 .hero-panel h1, .hero-panel h2 {
   font-size: clamp(2.5rem, 11vw, 5.2rem); line-height: 1.02; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.03em;
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);

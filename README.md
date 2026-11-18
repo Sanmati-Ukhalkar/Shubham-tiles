@@ -1,4 +1,4 @@
-# SHUBHA website
+# SHUBHAM website
 
 A mobile-first website for interlocking parking blocks, with:
 

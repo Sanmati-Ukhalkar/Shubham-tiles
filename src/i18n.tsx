@@ -139,7 +139,7 @@ const en = {
   colour_charcoal: 'Charcoal',
   colour_terracotta: 'Terracotta',
   colour_sandstone: 'Sandstone',
-  wa_hello: 'Hello SHUBHA! I designed my parking on your website.',
+  wa_hello: 'Hello SHUBHAM! I designed my parking on your website.',
   close: 'Close',
 };
 
@@ -284,7 +284,7 @@ const mr: Dict = {
   colour_charcoal: 'चारकोल',
   colour_terracotta: 'टेराकोटा',
   colour_sandstone: 'सँडस्टोन',
-  wa_hello: 'नमस्कार SHUBHA! मी तुमच्या वेबसाइटवर माझे पार्किंग डिझाइन केले आहे.',
+  wa_hello: 'नमस्कार SHUBHAM! मी तुमच्या वेबसाइटवर माझे पार्किंग डिझाइन केले आहे.',
   close: 'बंद करा',
 };
 
@@ -298,7 +298,7 @@ const I18n = createContext<Ctx>(null!);
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     try {
-      return (localStorage.getItem('shubha-lang') as Lang) || 'en';
+      return (localStorage.getItem('shubham-lang') as Lang) || 'en';
     } catch {
       return 'en';
     }
@@ -307,7 +307,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLangState(l);
     document.documentElement.lang = l;
     try {
-      localStorage.setItem('shubha-lang', l);
+      localStorage.setItem('shubham-lang', l);
     } catch {
       /* ignore */
     }
