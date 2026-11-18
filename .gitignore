@@ -1,2 +1,5 @@
 node_modules
 dist
+
+# client documents (pricing) — keep out of the public repo
+quotes/

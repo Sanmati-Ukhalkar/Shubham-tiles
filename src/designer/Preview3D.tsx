@@ -255,21 +255,21 @@ export default function Preview3D({ polyM, tiles, design, env, night, thicknessM
     const roadZ = b.h / 2 + 6.5;
     const road = new THREE.Mesh(new THREE.PlaneGeometry(400, 7), std('#3a3b3e', { roughness: 0.95 }));
     road.rotation.x = -Math.PI / 2;
-    road.position.set(0, 0.003, roadZ);
+    road.position.set(0, 0.012, roadZ);
     road.receiveShadow = true;
     scene.add(road);
     const dashMat = std('#f2f2ee', { roughness: 0.7, emissive: night ? '#555' : '#000' });
     for (let x = -120; x < 120; x += 6) {
       const dash = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.15), dashMat);
       dash.rotation.x = -Math.PI / 2;
-      dash.position.set(x, 0.005, roadZ);
+      dash.position.set(x, 0.018, roadZ);
       scene.add(dash);
     }
     const grass = std('#6a8c45', { roughness: 1 });
     for (const side of [-1, 1]) {
       const g = new THREE.Mesh(new THREE.PlaneGeometry(3.6, b.h + 4), grass);
       g.rotation.x = -Math.PI / 2;
-      g.position.set(side * (b.w / 2 + 2.4), 0.004, 0);
+      g.position.set(side * (b.w / 2 + 2.4), 0.012, 0);
       g.receiveShadow = true;
       scene.add(g);
     }
