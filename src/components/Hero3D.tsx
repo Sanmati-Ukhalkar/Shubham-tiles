@@ -32,7 +32,7 @@ function patternTexture(design: Design) {
   for (let r = -2; r <= 8; r++)
     for (let q = -6; q <= 6; q++) {
       const p = tileCentre(q, r);
-      tiles.push({ q, r, cx: p.x, cy: p.y, key: '' });
+      tiles.push({ q, r, k: 0, cx: p.x, cy: p.y, key: '' });
     }
   g.scale(sx / scale, sy / scale); // tiny correction for pixel rounding
   drawTiles(g, tiles, design, { scale, ox: 0, oy: 0 }, undefined, '#4d463d');
@@ -107,7 +107,7 @@ export default function Hero3D({ onDesign }: { onDesign: () => void }) {
       uniforms: { top: { value: skyTop }, bottom: { value: horizon } },
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
       fragmentShader:
-        'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y*2.4+0.05,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, pow(h,0.7)),1.0); }',
+        'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, smoothstep(0.02, 0.45, h)),1.0); }',
     });
     scene.add(new THREE.Mesh(skyGeo, skyMat));
 

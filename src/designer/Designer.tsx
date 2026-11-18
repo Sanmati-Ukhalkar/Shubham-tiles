@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { COLOURS, colourById, SQFT_PER_M2, THICKNESSES } from '../config';
+import { BLOCKS, COLOURS, colourById, SQFT_PER_M2 } from '../config';
 import { Swatch } from '../components/Sections';
 import { Logo } from '../components/Icons';
 import { estimate, num } from '../geometry/estimate';
-import { Design, PATTERNS, polygonArea, Pt, tileAt, tilesInPolygon } from '../geometry/trihex';
+import { blockById, Design, layoutOf, layoutsFor, PATTERNS, polygonArea, Pt, tileAt, tilesInPolygon } from '../geometry/trihex';
 import { Key, useI18n } from '../i18n';
 import EstimateStep from './EstimateStep';
 import PlanCanvas from './PlanCanvas';
@@ -35,7 +35,7 @@ const lPoly = (w: number, l: number, cw: number, ch: number): Pt[] => {
 
 const DRAW_EXTENT = { w: 60, h: 45 };
 
-export default function Designer({ onClose }: { onClose: () => void }) {
+export default function Designer({ onClose, initialDesign }: { onClose: () => void; initialDesign?: Design }) {
   const { t, lang, setLang } = useI18n();
   const [step, setStep] = useState(0);
 
@@ -55,15 +55,31 @@ export default function Designer({ onClose }: { onClose: () => void }) {
   const closed = mode !== 'draw' || drawClosed;
   const areaSqft = closed && polyFt.length > 2 ? polygonArea(polyFt.map(toM)) * SQFT_PER_M2 : 0;
 
-  // ── step 2: pattern ──
-  const [design, setDesign] = useState<Design>({ pattern: 'stripes', palette: ['grey', 'terracotta'], overrides: {} });
+  // ── step 2: block + pattern ──
+  const [design, setDesign] = useState<Design>(
+    () => initialDesign ?? { blockId: BLOCKS[0].id, layoutId: undefined, pattern: 'stripes', palette: ['grey', 'terracotta'], overrides: {} },
+  );
   const [painting, setPainting] = useState(false);
   const [brush, setBrush] = useState('terracotta');
-  const [thicknessId, setThicknessId] = useState(THICKNESSES[0].id);
-  const thickness = THICKNESSES.find((x) => x.id === thicknessId)!;
+  const spec = blockById(design.blockId);
+  const layout = layoutOf(design);
+  const [thicknessId, setThicknessId] = useState(spec.thicknesses[0].id);
+  const thickness = spec.thicknesses.find((x) => x.id === thicknessId) ?? spec.thicknesses[0];
+
+  const chooseBlock = (id: string) => {
+    const b = blockById(id);
+    setDesign((d) => ({
+      ...d,
+      blockId: id,
+      layoutId: undefined,
+      overrides: {},
+      palette: d.palette.filter((c) => b.colours.includes(c)).length ? d.palette.filter((c) => b.colours.includes(c)) : b.colours.slice(0, 2),
+    }));
+    setThicknessId(b.thicknesses[0].id);
+  };
 
   const polyM = useMemo(() => polyFt.map(toM), [polyFt]);
-  const tiles = useMemo(() => (closed && polyM.length > 2 ? tilesInPolygon(polyM) : []), [closed, polyM]);
+  const tiles = useMemo(() => (closed && polyM.length > 2 ? tilesInPolygon(polyM, layout) : []), [closed, polyM, layout]);
   const est = useMemo(() => estimate(polyM, tiles, design, thickness), [polyM, tiles, design, thickness]);
 
   // ── step 3: 3D ──
@@ -93,9 +109,9 @@ export default function Designer({ onClose }: { onClose: () => void }) {
   };
 
   const onPaint = (_ft: Pt, m: Pt) => {
-    const hit = tileAt(m);
+    const hit = tileAt(m, layout);
     if (!hit) return;
-    const key = `${hit.q},${hit.r}`;
+    const key = `${hit.q},${hit.r},${hit.k}`;
     if (design.overrides[key] === brush) return;
     setDesign((d) => ({ ...d, overrides: { ...d.overrides, [key]: brush } }));
   };
@@ -238,6 +254,31 @@ export default function Designer({ onClose }: { onClose: () => void }) {
               <h2 className="h3">{t('pat_choose_title')}</h2>
               <p className="muted small">{painting ? t('paint_on') : t('pat_choose_help')}</p>
               <PlanCanvas polyFt={polyFt} closed tiles={tiles} design={design} onTap={painting ? onPaint : undefined} dragPaint={painting} />
+              <h3 className="h4">{t('block_type')}</h3>
+              <div className="layout-row">
+                {BLOCKS.map((b) => (
+                  <button key={b.id} className={`layout-btn ${spec.id === b.id ? 'on' : ''}`} onClick={() => chooseBlock(b.id)}>
+                    <Swatch design={{ blockId: b.id, pattern: 'solid', palette: [b.colours[0]], overrides: {} }} across={2.4} className="swatch layout-swatch" />
+                    <span>{t(`block_${b.id}` as Key)}</span>
+                  </button>
+                ))}
+              </div>
+              {layoutsFor(spec.id).length > 1 && (
+                <>
+                  <h3 className="h4">{t('laying_style')}</h3>
+                  <div className="env-row">
+                    {layoutsFor(spec.id).map((l) => (
+                      <button
+                        key={l.id}
+                        className={`chip ${layout.id === l.id ? 'chip-on' : ''}`}
+                        onClick={() => setDesign({ ...design, layoutId: l.id, overrides: {} })}
+                      >
+                        {t(`lay_${l.id}` as Key)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               <div className="row-between">
                 <h3 className="h4">{t('layouts')}</h3>
               </div>
@@ -248,14 +289,14 @@ export default function Designer({ onClose }: { onClose: () => void }) {
                     className={`layout-btn ${design.pattern === p ? 'on' : ''}`}
                     onClick={() => setDesign({ ...design, pattern: p })}
                   >
-                    <Swatch design={{ pattern: p, palette: design.palette, overrides: {} }} across={3.2} className="swatch layout-swatch" />
+                    <Swatch design={{ ...design, pattern: p, overrides: {} }} across={3.2} className="swatch layout-swatch" />
                     <span>{t(`pattern_${p}` as Key)}</span>
                   </button>
                 ))}
               </div>
               <h3 className="h4">{t('palette')}</h3>
               <div className="palette-row">
-                {COLOURS.map((c) => {
+                {COLOURS.filter((c) => spec.colours.includes(c.id)).map((c) => {
                   const idx = design.palette.indexOf(c.id);
                   return (
                     <button
@@ -282,7 +323,7 @@ export default function Designer({ onClose }: { onClose: () => void }) {
               )}
               <h3 className="h4">{t('thickness')}</h3>
               <div className="seg-toggle">
-                {THICKNESSES.map((th) => (
+                {spec.thicknesses.map((th) => (
                   <button key={th.id} className={th.id === thicknessId ? 'on' : ''} onClick={() => setThicknessId(th.id)}>
                     <b>{th.label}</b>
                     <small>{t(th.use as Key)}</small>

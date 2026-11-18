@@ -19,6 +19,21 @@ export function Logo({ light = false }: { light?: boolean }) {
   );
 }
 
+const SEG_PATHS: Record<'petrol' | 'factory' | 'society' | 'shop', string> = {
+  petrol: 'M4 20V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v15M3 20h13M7 7h5v4H7zM15 9l3 2v6a1.5 1.5 0 0 0 3 0V9l-3-3',
+  factory: 'M3 20V10l5 3V10l5 3V10l5 3V4h3v16zM7 17h2M12 17h2M17 17h2',
+  society: 'M4 20V6l7-3v17M11 20V9l9 2v9M3 20h18M7 8h1M7 11h1M7 14h1M14 13h1M17 13h1M14 16h1M17 16h1',
+  shop: 'M4 10v10h16V10M3 10l2-6h14l2 6zM3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M10 20v-5h4v5',
+};
+
+export function SegIcon({ kind }: { kind: keyof typeof SEG_PATHS }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={SEG_PATHS[kind]} />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon() {
   return (
     <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden fill="currentColor">

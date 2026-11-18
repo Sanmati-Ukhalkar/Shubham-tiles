@@ -1,33 +1,15 @@
-# SHUBHAM — Block Spec (placeholder until real numbers arrive)
+# Mahesh Cement Articles — Product specs used on the website
 
-Based on typical Indian market listings (Nov 2026). Every value here is a setting in the website, so swapping in your real numbers later takes seconds.
+All values live in `src/config.ts` (`BLOCKS`). "Confirmed" = given by the client.
 
-## Block: "Trihex" interlocking paver (rounded triangle, 3 lobes)
+| Product (site name) | Shape | Size | Thickness | Price | Status |
+|---|---|---|---|---|---|
+| Colorado | 3-lobed interlocking ("trihex") | 0.446 sq ft per block (≈ 253 mm across) | 60 mm, M25 | ₹4,400 per brass (224 blocks) = ₹44/sq ft | **Confirmed** |
+| Rectangle 8×10″ | Rectangle, crack-stone face | 8 × 10 in (203 × 254 mm) | 40 / 60 mm (to confirm) | ₹38 / ₹45 per sq ft (placeholder) | Size confirmed |
+| Hexa Split | Half-hexagon trapezoid | ≈ 300 mm long side (from photos) | 60 / 80 mm (to confirm) | ₹40 / ₹55 per sq ft (placeholder) | Estimated |
+| Stone Brick | Rectangle 2:1, crack-stone face | ≈ 230 × 115 mm (from photos) | 60 / 80 mm (to confirm) | placeholder | Estimated |
+| Plain Brick | Rectangle 2:1 | ≈ 200 × 100 mm (from photos) | 60 / 80 mm (to confirm) | placeholder | Estimated |
 
-| Item | Value |
-|---|---|
-| Plan size (across) | ~220 × 190 mm |
-| Thickness — light traffic (societies, shops) | 60 mm |
-| Thickness — heavy traffic (petrol pumps, factories) | 80 mm |
-| Laying | Each block interlocks with its neighbour rotated 180°. No border/kerb blocks. |
-| Joint gap | ~3 mm (sand-filled) |
-| Coverage | Calculated from the exact shape in code. Expect ~3 blocks per sq ft. |
-| Wastage added | 5% (edge cutting) |
+1 brass = 100 sq ft.
 
-## Colours
-Grey · Charcoal · Terracotta · Sandstone
-
-## Price (placeholder, material only, excl. laying, transport, GST)
-
-| Thickness | ₹ / sq ft |
-|---|---|
-| 60 mm | 40 |
-| 80 mm | 55 |
-
-Coloured blocks (terracotta, sandstone) can get a small extra charge if you want — tell me.
-
-## Still to confirm
-- Exact plan size and shape (one photo with a measuring tape is perfect)
-- Your real prices per thickness / colour
-- WhatsApp number
-- Real project photos for "Our Work"
+Still to ask: exact sizes, thickness and prices for Hexa Split, Stone Brick and Plain Brick; thickness/price for the 8×10″; whether the photos marked as possible reposts are their own work.

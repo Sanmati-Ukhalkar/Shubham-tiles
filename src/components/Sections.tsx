@@ -3,7 +3,8 @@ import { BLOCK, BRAND, COLOURS, THICKNESSES } from '../config';
 import { drawSwatch } from '../geometry/render2d';
 import { blockArea, Design } from '../geometry/trihex';
 import { Key, useI18n } from '../i18n';
-import { Logo, WhatsAppIcon } from './Icons';
+import BlockViewer from './BlockViewer';
+import { Logo, SegIcon, WhatsAppIcon } from './Icons';
 
 export function Swatch({ design, across = 5, className }: { design: Design; across?: number; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -38,13 +39,13 @@ export function Nav({ onDesign }: { onDesign: () => void }) {
   }, []);
   const links: [Key, string][] = [
     ['nav_products', '#products'],
-    ['nav_patterns', '#patterns'],
     ['nav_work', '#work'],
+    ['nav_process', '#process'],
     ['nav_contact', '#contact'],
   ];
   return (
     <header className={`nav ${solid || open ? 'nav-solid' : ''}`}>
-      <a href="#home" className="nav-logo" aria-label={BRAND.name}>
+      <a href="#home" className="nav-logo" aria-label={BRAND.fullName}>
         <Logo />
       </a>
       <nav className={`nav-links ${open ? 'open' : ''}`} onClick={() => setOpen(false)}>
@@ -53,7 +54,7 @@ export function Nav({ onDesign }: { onDesign: () => void }) {
             {t(k)}
           </a>
         ))}
-        <button className="link-btn" onClick={onDesign}>
+        <button className="link-btn nav-cta" onClick={onDesign}>
           {t('nav_design')}
         </button>
       </nav>
@@ -84,7 +85,7 @@ export function Products() {
     <section className="section" id="products">
       <div className="container split">
         <div className="product-visual">
-          <Swatch design={{ pattern: 'solid', palette: ['grey'], overrides: {} }} across={2.2} className="swatch swatch-round" />
+          <BlockViewer />
         </div>
         <div>
           <h2 className="h2">
@@ -164,11 +165,11 @@ export function Patterns({ onDesign }: { onDesign: () => void }) {
   );
 }
 
-const SEGMENTS: { k: Key; d: Key; icon: string; design: Design }[] = [
-  { k: 'seg_petrol', d: 'seg_petrol_d', icon: '⛽', design: { pattern: 'stripes', palette: ['grey', 'charcoal'], overrides: {} } },
-  { k: 'seg_factory', d: 'seg_factory_d', icon: '🏭', design: { pattern: 'bands', palette: ['grey', 'charcoal'], overrides: {} } },
-  { k: 'seg_society', d: 'seg_society_d', icon: '🏢', design: { pattern: 'mix', palette: ['terracotta', 'charcoal', 'grey'], overrides: {} } },
-  { k: 'seg_shop', d: 'seg_shop_d', icon: '🏪', design: { pattern: 'dots', palette: ['sandstone', 'terracotta'], overrides: {} } },
+const SEGMENTS: { k: Key; d: Key; icon: 'petrol' | 'factory' | 'society' | 'shop'; mm: number; design: Design }[] = [
+  { k: 'seg_petrol', d: 'seg_petrol_d', icon: 'petrol', mm: 80, design: { pattern: 'stripes', palette: ['terracotta', 'charcoal'], overrides: {} } },
+  { k: 'seg_factory', d: 'seg_factory_d', icon: 'factory', mm: 80, design: { pattern: 'bands', palette: ['grey', 'charcoal'], overrides: {} } },
+  { k: 'seg_society', d: 'seg_society_d', icon: 'society', mm: 60, design: { pattern: 'triad', palette: ['terracotta', 'grey', 'sandstone'], overrides: {} } },
+  { k: 'seg_shop', d: 'seg_shop_d', icon: 'shop', mm: 60, design: { pattern: 'dots', palette: ['sandstone', 'terracotta'], overrides: {} } },
 ];
 
 export function WhereWeWork() {
@@ -185,12 +186,18 @@ export function WhereWeWork() {
         <div className="seg-grid">
           {SEGMENTS.map((s) => (
             <article key={s.k} className="seg-card">
-              <Swatch design={s.design} across={6} className="swatch seg-swatch" />
+              <div className="seg-media">
+                <Swatch design={s.design} across={7} className="swatch seg-swatch" />
+                <span className="seg-tag">{s.mm} mm</span>
+              </div>
               <div className="seg-body">
-                <h3>
-                  <span aria-hidden>{s.icon}</span> {t(s.k)}
-                </h3>
-                <p>{t(s.d)}</p>
+                <span className="seg-icon" aria-hidden>
+                  <SegIcon kind={s.icon} />
+                </span>
+                <div>
+                  <h3>{t(s.k)}</h3>
+                  <p>{t(s.d)}</p>
+                </div>
               </div>
             </article>
           ))}
@@ -225,11 +232,29 @@ export function Contact() {
             {t('call')}: {BRAND.phone}
           </a>
         </div>
+        <div className="contact-cards">
+          <div className="contact-card">
+            <small>{t('call')}</small>
+            <a href={`tel:${BRAND.phone.replace(/\s/g, '')}`}>{BRAND.phone}</a>
+            <a href={`tel:${BRAND.phone2.replace(/\s/g, '')}`}>{BRAND.phone2}</a>
+          </div>
+          <div className="contact-card">
+            <small>Email</small>
+            <a href={`mailto:${BRAND.email}`}>{BRAND.email}</a>
+          </div>
+          <div className="contact-card contact-card-wide">
+            <small>{BRAND.fullName}</small>
+            <span>{BRAND.address}</span>
+            <a href={BRAND.mapsUrl} target="_blank" rel="noopener" className="map-link">
+              {t('find_us')} →
+            </a>
+          </div>
+        </div>
       </div>
       <footer className="footer">
         <Logo light />
         <span>
-          © {new Date().getFullYear()} {BRAND.name} · {t('footer')}
+          © {new Date().getFullYear()} {BRAND.fullName} · {t('footer')}
         </span>
       </footer>
     </section>

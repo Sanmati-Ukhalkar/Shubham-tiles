@@ -1,18 +1,22 @@
 import * as THREE from 'three';
 import { BLOCK } from '../config';
-import { blockEdges } from './trihex';
+import { blockEdges, EdgeSeg, shrinkSegs } from './trihex';
 
 /**
  * 3D block geometry lying flat on the XZ plane, top face at y = thickness.
  * Tile centre (cx, cy) from the 2D layout maps to world (cx, 0, cy).
+ * `segs` is the block outline (defaults to the trihex).
  */
-export function makeBlockGeometry(thicknessM = 0.08, detail: 'low' | 'high' = 'low'): THREE.BufferGeometry {
+export function makeBlockGeometry(thicknessM = 0.08, detail: 'low' | 'high' = 'low', segs?: EdgeSeg[]): THREE.BufferGeometry {
   const bevel = Math.min(0.008, thicknessM * 0.12);
-  const edges = blockEdges(BLOCK.radius, BLOCK.bulge, BLOCK.joint + bevel);
+  const edges = segs ? shrinkSegs(segs, BLOCK.joint + bevel) : blockEdges(BLOCK.radius, BLOCK.bulge, BLOCK.joint + bevel);
   const shape = new THREE.Shape();
   // y is negated so that, after rotating onto the ground, 2D y becomes world +z
   shape.moveTo(edges[0].from.x, -edges[0].from.y);
-  for (const e of edges) shape.quadraticCurveTo(e.ctrl.x, -e.ctrl.y, e.to.x, -e.to.y);
+  for (const e of edges) {
+    if (e.ctrl) shape.quadraticCurveTo(e.ctrl.x, -e.ctrl.y, e.to.x, -e.to.y);
+    else shape.lineTo(e.to.x, -e.to.y);
+  }
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: thicknessM - bevel * 2,
     bevelEnabled: true,

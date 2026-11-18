@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BLOCK, BRAND, colourById, Thickness } from '../config';
+import { BLOCK, BRAND, colourById, SQFT_PER_BRASS, Thickness } from '../config';
 import { waLink } from '../components/Sections';
 import { WhatsAppIcon } from '../components/Icons';
 import { Estimate, inr, num } from '../geometry/estimate';
@@ -25,6 +25,8 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
   );
 
   const colourName = (id: string) => t(`colour_${id}` as Key);
+  const blockName = t(`block_${design.blockId ?? 'trihex'}` as Key);
+  const brass = (est.areaSqft / SQFT_PER_BRASS).toFixed(1);
   const patternName = t(`pattern_${design.pattern}` as Key);
   const sides = polyFt
     .map((a, i) => {
@@ -36,8 +38,8 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
   const message = [
     t('wa_hello'),
     '',
-    `• ${t('area')}: ${num(est.areaSqft)} sq ft (sides: ${sides} ft)`,
-    `• ${BLOCK.name} ${thickness.label}, ${patternName}`,
+    `• ${t('area')}: ${num(est.areaSqft)} sq ft = ${brass} brass (sides: ${sides} ft)`,
+    `• ${blockName} ${thickness.label}, ${patternName}`,
     `• ${t('blocks_needed')}: ${num(est.blocksOrder)}`,
     ...est.byColour.map((c) => `   - ${colourName(c.id)}: ${num(c.count)}`),
     `• ${t('est_cost')}: ${inr(est.cost)} (approx.)`,
@@ -46,7 +48,7 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
   const savePng = () => {
     const a = document.createElement('a');
     a.href = planUrl;
-    a.download = `${BRAND.name.toLowerCase()}-design.png`;
+    a.download = `mahesh-cement-articles-design.png`;
     a.click();
   };
 
@@ -61,10 +63,10 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
-      doc.text(BRAND.name, 14, 14);
+      doc.text(BRAND.fullName.toUpperCase(), 14, 14);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${BRAND.tagline}  |  ${BRAND.phone}  |  ${BRAND.email}`, W - 14, 14, { align: 'right' });
+      doc.text(`Chandwad, Nashik  |  ${BRAND.phone}  |  ${BRAND.email}`, W - 14, 14, { align: 'right' });
 
       doc.setTextColor(30, 30, 30);
       doc.setFont('helvetica', 'bold');
@@ -86,8 +88,8 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
       y += planH + 8;
 
       const rows: [string, string][] = [
-        ['Area', `${num(est.areaSqft)} sq ft`],
-        ['Block', `${BLOCK.name}, ${thickness.label}`],
+        ['Area', `${num(est.areaSqft)} sq ft (${brass} brass)`],
+        ['Block', `${blockName}, ${thickness.label}`],
         ['Pattern', design.pattern],
         ['Blocks needed', `${num(est.blocksOrder)} (edge cuts + ${Math.round(BLOCK.wastage * 100)}% spare)`],
         ...est.byColour.map((c): [string, string] => [`  ${c.id[0].toUpperCase()}${c.id.slice(1)}`, num(c.count)]),
@@ -106,7 +108,7 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
       doc.setFontSize(8);
       doc.setTextColor(130, 130, 130);
       doc.text('Estimate is indicative. Final quote depends on site survey, laying, transport and GST.', 14, 287);
-      doc.save(`${BRAND.name.toLowerCase()}-design.pdf`);
+      doc.save(`mahesh-cement-articles-design.pdf`);
     } finally {
       setBusy(false);
     }
@@ -121,7 +123,7 @@ export default function EstimateStep({ est, design, polyFt, tiles, thickness, sn
       <p className="muted d-sub">{t('est_sub')}</p>
       <img className="est-hero" src={snapshot ?? planUrl} alt="" />
       <div className="est-card">
-        <Row icon="⬚" title={t('area')} sub={t('total_area')} value={<b className="big">{num(est.areaSqft)} sq ft</b>} />
+        <Row icon="⬚" title={t('area')} sub={t('total_area')} value={<b className="big">{num(est.areaSqft)} sq ft<small className="brass">{brass} brass</small></b>} />
         <Row
           icon="⬢"
           title={t('blocks_needed')}

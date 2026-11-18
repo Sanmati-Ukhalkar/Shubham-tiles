@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { BLOCK, colourById } from '../config';
+import { colourById } from '../config';
 import { concreteGrain, makeBlockGeometry } from '../geometry/block3d';
 import { blockPath, drawTiles } from '../geometry/render2d';
-import { bbox, blockOutline, colourOf, Design, pointInPolygon, Pt, Tile } from '../geometry/trihex';
+import { bbox, colourOf, Design, layoutOf, pointInPolygon, Pt, sampleSegs, Tile } from '../geometry/trihex';
 import { Key, useI18n } from '../i18n';
 import type { Env } from './Designer';
 import { buildEnv, placeVehicles, std } from './props3d';
@@ -277,12 +277,13 @@ export default function Preview3D({ polyM, tiles, design, env, night, thicknessM
     // ── the paving ──
     // Whole blocks are real 3D blocks; blocks cut at the boundary come from an exact top-down texture.
     const thick = thicknessMm / 1000;
-    const outline = blockOutline(BLOCK.radius, 4);
+    const layout = layoutOf(design);
+    const outlines = layout.protos.map((p) => sampleSegs(p.segs, 4));
     const limit = mobile ? 7000 : 20000;
     const inside: Tile[] = [];
     const edge: Tile[] = [];
     for (const tl of tiles) {
-      const whole = outline.every((p) => pointInPolygon({ x: p.x + tl.cx, y: p.y + tl.cy }, polyM));
+      const whole = outlines[tl.k].every((p) => pointInPolygon({ x: p.x + tl.cx, y: p.y + tl.cy }, polyM));
       (whole ? inside : edge).push(tl);
     }
     const use3D = inside.length <= limit;
@@ -304,44 +305,52 @@ export default function Preview3D({ polyM, tiles, design, env, night, thicknessM
     top.receiveShadow = true;
     scene.add(top);
 
-    let blocks: THREE.InstancedMesh | null = null;
     const layoutChanged =
       lastLayout.current.tiles !== tiles || lastLayout.current.design !== design || lastLayout.current.thick !== thicknessMm;
     lastLayout.current = { tiles, design, thick: thicknessMm };
 
     if (use3D && inside.length) {
-      const geo = makeBlockGeometry(thick, !mobile && inside.length < 2500 ? 'high' : 'low');
+      const detail = !mobile && inside.length < 2500 ? 'high' : 'low';
       const mat = new THREE.MeshStandardMaterial({ roughness: 0.88, bumpMap: concreteGrain(), bumpScale: 0.5 });
-      blocks = new THREE.InstancedMesh(geo, mat, inside.length);
-      blocks.receiveShadow = true;
-      blocks.castShadow = !mobile && !night;
       const m4 = new THREE.Matrix4();
       const col = new THREE.Color();
       const baseY = -thick + 0.002;
-      inside.forEach((tl, i) => {
-        m4.makeTranslation(tl.cx - cx, baseY, tl.cy - cz);
-        blocks!.setMatrixAt(i, m4);
-        const jitter = 0.93 + (((tl.q * 31 + tl.r * 17) % 13) + 13) % 13 / 100;
-        col.set(colourById(colourOf(design, tl.q, tl.r)).hex).multiplyScalar(jitter);
-        blocks!.setColorAt(i, col);
+      // one instanced mesh per block shape in the layout (e.g. both halves of a split hexagon)
+      const groups = layout.protos.map((p, k) => {
+        const list = inside.filter((tl) => tl.k === k);
+        if (!list.length) return null;
+        const mesh = new THREE.InstancedMesh(makeBlockGeometry(thick, detail, p.segs), mat, list.length);
+        mesh.receiveShadow = true;
+        mesh.castShadow = !mobile && !night;
+        list.forEach((tl, i) => {
+          m4.makeTranslation(tl.cx - cx, baseY, tl.cy - cz);
+          mesh.setMatrixAt(i, m4);
+          const jitter = 0.93 + ((((tl.q * 31 + tl.r * 17 + tl.k * 7) % 13) + 13) % 13) / 100;
+          col.set(colourById(colourOf(design, tl.q, tl.r, tl.k)).hex).multiplyScalar(jitter);
+          mesh.setColorAt(i, col);
+        });
+        scene.add(mesh);
+        return { mesh, list };
       });
-      scene.add(blocks);
 
       // blocks drop into place when the layout changes
       if (layoutChanged && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        const delays = inside.map((tl) => (Math.hypot(tl.cx - b.minX, tl.cy - b.minY) / Math.hypot(b.w, b.h)) * 900);
         const t0 = performance.now();
-        const inst = blocks;
+        const anims: { mesh: THREE.InstancedMesh; list: Tile[]; delays: number[] }[] = [];
+        for (const g of groups)
+          if (g) anims.push({ mesh: g.mesh, list: g.list, delays: g.list.map((tl) => (Math.hypot(tl.cx - b.minX, tl.cy - b.minY) / Math.hypot(b.w, b.h)) * 900) });
         blockAnim.current = (now) => {
           let busy = false;
-          for (let i = 0; i < inside.length; i++) {
-            const k = Math.min(1, Math.max(0, (now - t0 - delays[i]) / 420));
-            if (k < 1) busy = true;
-            const e = 1 - Math.pow(1 - k, 3);
-            m4.makeTranslation(inside[i].cx - cx, baseY + (1 - e) * 1.4, inside[i].cy - cz);
-            inst.setMatrixAt(i, m4);
+          for (const g of anims) {
+            for (let i = 0; i < g.list.length; i++) {
+              const k = Math.min(1, Math.max(0, (now - t0 - g.delays[i]) / 420));
+              if (k < 1) busy = true;
+              const e = 1 - Math.pow(1 - k, 3);
+              m4.makeTranslation(g.list[i].cx - cx, baseY + (1 - e) * 1.4, g.list[i].cy - cz);
+              g.mesh.setMatrixAt(i, m4);
+            }
+            g.mesh.instanceMatrix.needsUpdate = true;
           }
-          inst.instanceMatrix.needsUpdate = true;
           return busy;
         };
       }
